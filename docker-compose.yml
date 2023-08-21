@@ -1,16 +1,27 @@
 
 services:
   redis:
-    image: 'redis/redis-stack:latest'
+    image: 'redis/redis-stack-server:latest'
     ports:
       - '6379:6379'
+  redis-slave:
+    image: 'redis/redis-stack-server:latest'
+    environment:
+      - REDIS_ARGS=--port 6380 --replicaof ${DOCKER_HOST_IP} 6379 --slave-announce-ip ${DOCKER_HOST_IP}
+    ports:
+      - '6380:6380'
+    depends_on:
+      - redis
   redis-sentinel:
     image: 'bitnami/redis-sentinel:latest'
     environment:
       - REDIS_SENTINEL_QUORUM=1
       - REDIS_MASTER_HOST=${DOCKER_HOST_IP}
       - REDIS_MASTER_SET=${REDIS_MASTER_SET}
+      - REDIS_SENTINEL_DOWN_AFTER_MILLISECONDS=5000
+      - REDIS_SENTINEL_FAILOVER_TIMEOUT=15000
     depends_on:
       - redis
+      - redis-slave
     ports:
       - '26379:26379'
